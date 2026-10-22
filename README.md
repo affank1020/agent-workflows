@@ -39,6 +39,12 @@ python3 -m venv .venv
 
 The GitHub Actions `Validate workflow files` check runs the same validations. Skill metadata uses safe YAML parsing, and every `skills/<name>/` directory must contain a valid `SKILL.md`. These checks cover packaging and references, **not the correctness of AI reasoning**. Use the manual pilot scenarios to evaluate behavior.
 
+## Update the installed Prepare PR plugin
+
+The [Pull latest procedure](docs/PULL_LATEST.md) rebuilds the ChatGPT private plugin **from the reviewed GitHub main branch**. Run `python3 scripts/build_plugin.py --output /tmp/prepare-pr.zip` to produce a deterministic ZIP. CI checks the package and attaches it as an artifact; publishing it to the existing private plugin requires an explicit authenticated update.
+
+The GitHub repository is the **only editable source**. The installed plugin is a versioned output, not a second place to maintain instructions. Updates are **on demand** rather than automatic, protecting in-flight development chats.
+
 ## Rollout status
 
 The initial `prepare-pr` workflow is a pilot. It is **not automatically enabled** in Atlas, Benchmark or any connected AI client by merging this repository. Existing development tracks remain unchanged until their adoption is explicitly agreed and validated.

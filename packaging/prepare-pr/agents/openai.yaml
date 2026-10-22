@@ -1,0 +1,6 @@
+interface:
+  display_name: Prepare PR
+  short_description: Review your PR before handoff
+  default_prompt: Prepare my current draft PR for independent review using the full branch diff.
+policy:
+  allow_implicit_invocation: true
