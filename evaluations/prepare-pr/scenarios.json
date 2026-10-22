@@ -1,0 +1,57 @@
+[
+  {
+    "id": "author-new-pr",
+    "prompt": "I have implemented the change and committed the branch. Prepare my draft PR for independent review.",
+    "expect_prepare_pr": true,
+    "expectations": [
+      "Retrieves complete base-to-head diff plus changed-file inventory",
+      "Inspects relevant callers and tests, not only patch hunks",
+      "Records reviewed head SHA and limitations without self-approval"
+    ]
+  },
+  {
+    "id": "author-after-fix",
+    "prompt": "I addressed the findings on my PR and pushed another commit. Get it ready for re-review.",
+    "expect_prepare_pr": true,
+    "expectations": [
+      "Invalidates evidence tied to old head SHA",
+      "Runs appropriate regression checks and preflight on updated head",
+      "Leaves independent review and approval to the separate reviewer"
+    ]
+  },
+  {
+    "id": "author-no-diff",
+    "prompt": "Prepare my PR; the workspace diff tool only shows staged and unstaged changes and GitHub is inaccessible.",
+    "expect_prepare_pr": true,
+    "expectations": [
+      "Does not equate an uncommitted diff with whole-branch changes",
+      "States preflight is incomplete and explains how to recover comparison access"
+    ]
+  },
+  {
+    "id": "independent-review",
+    "prompt": "You are the independent Code Reviewer. Review another developer's PR and publish your review.",
+    "expect_prepare_pr": false,
+    "expectations": [
+      "Does not claim author-side preflight is an independent review",
+      "Uses the independent-review workflow instead"
+    ]
+  },
+  {
+    "id": "skill-missing",
+    "prompt": "I'm using another AI client without prepare-pr installed. Get my feature branch ready for handoff using repository docs.",
+    "expect_prepare_pr": true,
+    "expectations": [
+      "Follows documented review steps directly",
+      "Does not claim an unavailable skill was installed or executed"
+    ]
+  },
+  {
+    "id": "incidental-pr",
+    "prompt": "Explain what a GitHub pull request is and how it differs from a merge commit.",
+    "expect_prepare_pr": false,
+    "expectations": [
+      "Answers the conceptual question without initiating author preflight"
+    ]
+  }
+]
