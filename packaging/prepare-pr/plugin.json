@@ -1,0 +1,23 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "prepare-pr",
+  "version": "0.1.0",
+  "description": "Author-side preflight of draft pull requests before independent code review. Read the complete change set, challenge correctness, fix credible defects, and record test evidence.",
+  "repository": "https://github.com/affank1020/agent-workflows",
+  "author": {
+    "name": "Affan Khan"
+  },
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "displayName": "Prepare PR",
+        "shortDescription": "Review your PR before handoff",
+        "longDescription": "Author-side PR preflight using the complete branch diff, relevant code, tests and regression risk checks. Does not replace independent review.",
+        "developerName": "Affan Khan",
+        "category": "Productivity",
+        "capabilities": [],
+        "defaultPrompt": "Prepare my current draft PR for independent review using the full branch diff."
+      }
+    }
+  }
+}
