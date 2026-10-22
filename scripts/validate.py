@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Structural checks for portable skill files; no third-party dependencies.
+"""Validate the structure of portable AI skill packages.
 
-This intentionally does NOT evaluate an AI agent's review quality.
+Behavioral correctness and skill selection still require manual agent pilots.
 """
 from __future__ import annotations
 
@@ -9,6 +9,9 @@ import json
 from pathlib import Path
 import re
 import sys
+
+import yaml
+from yaml.nodes import MappingNode
 
 ROOT = Path(__file__).resolve().parents[1]
 REQUIRED = [
@@ -21,35 +24,62 @@ REQUIRED = [
 ]
 LINK = re.compile(r"\[[^]]+\]\(([^)]+)\)")
 SKILL_NAME = re.compile(r"^[a-z][a-z0-9-]{0,63}$")
+FRONTMATTER = re.compile(r"\A---[ \t]*\r?\n(.*?)\r?\n---[ \t]*(?:\r?\n|\Z)", re.S)
 
 
 def fail(message: str) -> None:
     raise ValueError(message)
 
 
-def check_skills() -> None:
-    for path in sorted(ROOT.glob("skills/*/SKILL.md")):
+class UniqueKeySafeLoader(yaml.SafeLoader):
+    """Safe YAML subset with duplicate mapping keys forbidden."""
+
+    def construct_mapping(self, node: MappingNode, deep: bool = False) -> dict:
+        if not isinstance(node, MappingNode):
+            raise yaml.constructor.ConstructorError(None, None, "expected mapping", node.start_mark)
+        result = {}
+        for key_node, value_node in node.value:
+            key = self.construct_object(key_node, deep=deep)
+            if not isinstance(key, str):
+                fail("YAML frontmatter keys must be strings")
+            if key in result:
+                fail(f"duplicate YAML key: {key}")
+            result[key] = self.construct_object(value_node, deep=deep)
+        return result
+
+
+def check_skills(root: Path = ROOT) -> None:
+    skills = root / "skills"
+    if not skills.is_dir():
+        fail("Missing skills/ directory")
+    directories = sorted(path for path in skills.iterdir() if path.is_dir() and not path.name.startswith("."))
+    if not directories:
+        fail("No skill directories found")
+    for directory in directories:
+        if directory.is_symlink():
+            fail(f"Symlinked skill directory not allowed: {directory.name}")
+        path = directory / "SKILL.md"
+        display = path.relative_to(root)
+        if not path.is_file():
+            fail(f"{display}: missing entrypoint")
         value = path.read_text(encoding="utf-8")
-        match = re.match(r"\A---\r?\n(.*?)\r?\n---\r?\n", value, flags=re.S)
+        match = FRONTMATTER.match(value)
         if not match:
-            fail(f"{path.relative_to(ROOT)}: missing YAML frontmatter")
-        metadata: dict[str, str] = {}
-        for line in match.group(1).splitlines():
-            if ":" not in line:
-                fail(f"{path.relative_to(ROOT)}: frontmatter must be simple key: value")
-            key, field_value = line.split(":", 1)
-            key, field_value = key.strip(), field_value.strip()
-            if key in metadata or not key or not field_value:
-                fail(f"{path.relative_to(ROOT)}: duplicate or empty field {key!r}")
-            metadata[key] = field_value.strip("'\"")
-        name = metadata.get("name", "")
-        description = metadata.get("description", "")
-        if not SKILL_NAME.fullmatch(name) or name != path.parent.name:
-            fail(f"{path.relative_to(ROOT)}: name must match directory")
-        if not 40 <= len(description) <= 1024:
-            fail(f"{path.relative_to(ROOT)}: description must be 40-1024 characters")
+            fail(f"{display}: missing YAML frontmatter")
+        try:
+            metadata = yaml.load(match.group(1), Loader=UniqueKeySafeLoader)
+        except yaml.YAMLError as error:
+            fail(f"{display}: invalid YAML frontmatter: {error}")
+        if not isinstance(metadata, dict):
+            fail(f"{display}: frontmatter must be a YAML mapping")
+        name = metadata.get("name")
+        description = metadata.get("description")
+        if not isinstance(name, str) or not SKILL_NAME.fullmatch(name) or name != directory.name:
+            fail(f"{display}: name must be a string matching its directory")
+        if not isinstance(description, str) or not 40 <= len(description) <= 1024:
+            fail(f"{display}: description must be a string of 40-1024 characters")
         if not value[match.end():].strip():
-            fail(f"{path.relative_to(ROOT)}: missing skill procedure")
+            fail(f"{display}: missing skill procedure")
 
 
 def check_links() -> None:
@@ -102,7 +132,7 @@ def main() -> int:
     check_skills()
     check_links()
     check_scenarios()
-    print("OK: required files, skill metadata, Markdown links and scenario structure")
+    print("OK: required files, valid YAML metadata, skill directories, Markdown links and scenarios")
     print("Note: agent behavior and review accuracy still require manual pilot evaluation")
     return 0
 
