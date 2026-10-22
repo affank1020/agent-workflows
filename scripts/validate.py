@@ -37,11 +37,11 @@ def check_skills() -> None:
         for line in match.group(1).splitlines():
             if ":" not in line:
                 fail(f"{path.relative_to(ROOT)}: frontmatter must be simple key: value")
-            key, value = line.split(":", 1)
-            key, value = key.strip(), value.strip()
-            if key in metadata or not key or not value:
+            key, field_value = line.split(":", 1)
+            key, field_value = key.strip(), field_value.strip()
+            if key in metadata or not key or not field_value:
                 fail(f"{path.relative_to(ROOT)}: duplicate or empty field {key!r}")
-            metadata[key] = value.strip("'\"")
+            metadata[key] = field_value.strip("'\"")
         name = metadata.get("name", "")
         description = metadata.get("description", "")
         if not SKILL_NAME.fullmatch(name) or name != path.parent.name:
