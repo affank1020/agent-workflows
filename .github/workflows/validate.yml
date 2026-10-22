@@ -22,3 +22,14 @@ jobs:
         run: python3 -m unittest discover -s tests -v
       - name: Validate portable skills and references
         run: python3 scripts/validate.py
+      - name: Build Prepare PR package
+        run: python3 scripts/build_plugin.py --output /tmp/prepare-pr.zip --report /tmp/prepare-pr-provenance.json
+      - name: Upload validated package
+        uses: actions/upload-artifact@v4
+        with:
+          name: prepare-pr-package
+          path: |
+            /tmp/prepare-pr.zip
+            /tmp/prepare-pr-provenance.json
+          if-no-files-found: error
+          retention-days: 14
