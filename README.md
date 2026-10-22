@@ -28,7 +28,16 @@ Skills are instructions, **not CI gates**. Automation and reviewer analytics are
 
 ## Validation
 
-Run `python3 scripts/validate.py` locally, or inspect the repository's `Validate workflow files` GitHub Actions check. This checks structural consistency, **not the correctness of AI reasoning**. Use the manual pilot scenarios to evaluate behavior.
+Install the pinned development dependency in an isolated Python environment, then run the validator and its regression tests:
+
+```bash
+python3 -m venv .venv
+.venv/bin/python -m pip install -r requirements-dev.txt
+.venv/bin/python -m unittest discover -s tests -v
+.venv/bin/python scripts/validate.py
+```
+
+The GitHub Actions `Validate workflow files` check runs the same validations. Skill metadata uses safe YAML parsing, and every `skills/<name>/` directory must contain a valid `SKILL.md`. These checks cover packaging and references, **not the correctness of AI reasoning**. Use the manual pilot scenarios to evaluate behavior.
 
 ## Rollout status
 
