@@ -9,7 +9,7 @@ This repository is the **source of truth for reusable workflow guidance**, not a
 - [Development lifecycle](workflows/development-lifecycle.md) — shared end-to-end process, from scope to independent review.
 - [prepare-pr](skills/prepare-pr/SKILL.md) — author-side adversarial preflight before reviewer handoff.
 - [Preflight checklist](skills/prepare-pr/references/review-checklist.md) — risk-oriented questions.
-- [Pilot scenarios](evaluations/prepare-pr/scenarios.md) — manual behavior checks for Atlas, Benchmark and other clients.
+- [Pilot scenarios](evaluations/prepare-pr/scenarios.json) — manual behavior checks for Atlas, Benchmark and other clients.
 
 ## How the pieces fit
 
