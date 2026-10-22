@@ -1,33 +1,39 @@
 # Pull latest — Prepare PR
 
-**Source of truth:** this GitHub repository's reviewed main branch. Do not edit the installed ChatGPT plugin directly.
+**Source of truth:** the reviewed `main` branch of this repository. Never edit the installed ChatGPT skill separately.
 
-The package builder creates a ZIP containing exactly the files the existing private **Prepare PR** plugin needs. It has **no GitHub write access** and **cannot publish a ChatGPT plugin**. Publication is a separate, explicit authenticated step.
+The builder reads only Git-tracked, commit-matching files and constructs both portable and legacy plugin manifests. It cannot contact Plugin Creator, install plugins, or publish releases.
 
-## Build an update from the latest merged commit
+## Controlled update procedure
 
-1. Fetch the repository's **current** remote main and check out that exact commit in a clean, dedicated working directory. Do not assume a longstanding Linux checkout is up to date. Inspect for unrelated changes before proceeding.
-2. Run the repository validation and regression tests.
-3. Run the deterministic builder:
+1. Resolve current remote `main` to a full commit SHA and check it out in a clean, dedicated directory. Avoid relying on a stale VPS checkout. Run `python3 -m unittest discover -s tests -v` and `python3 scripts/validate.py` with the dependencies from `requirements-dev.txt`.
+2. Read **the existing** private Prepare PR plugin `plugins_6ad9fe3ef0688191af1c9c4a7d5934ac` using Plugin Creator's `get_plugin_files` or `get_plugin_metadata`. Capture **both** its current version (e.g. `0.1.1`) and its **current_release_id**. If access is unavailable, stop before publication.
+3. Compare its installed skill, references, shared workflow and presentation configuration against the reviewed GitHub source. Ignore only generated release-version differences. **Do nothing if the installed content is already equivalent.**
+4. When content actually changed, build the archive using the version read in step 2:
 
    ```bash
-python3 scripts/build_plugin.py --output /tmp/prepare-pr-latest.zip --report /tmp/prepare-pr-provenance.json
+   python3 scripts/build_plugin.py \
+     --installed-version 0.1.1 \
+     --output /tmp/prepare-pr-latest.zip \
+     --report /tmp/prepare-pr-provenance.json
+   ```
+
+   Replace `0.1.1` with the live installed version; **never reuse this example value**. The builder chooses the greater of the checked-in baseline and current installed version. Plugin Creator automatically advances a submitted equal version to the next patch (for example, `0.1.1` becomes `0.1.2`); lower versions are rejected. Only stable `MAJOR.MINOR.PATCH` versions are currently supported. If the installed version is prerelease/build-metadata versioned, stop for an explicit packaging change.
+5. Inspect the provenance report, ZIP SHA-256, complete file inventory and both manifests. Ensure that the **source commit matches the reviewed main SHA**, every source file was verified byte-for-byte against that commit, both manifests have the same effective version, and the ZIP only contains expected files. The manifest version is a **generated field** derived from canonical config and the live installed version; the rest of the packaged content is tracked in Git. The CI artifact, by contrast, is only an offline **preview** built using the checked-in baseline; do not publish it unmodified.
+6. **Re-read** the installed plugin's current version and `current_release_id` immediately before updating. If either differs from step 2, discard the ZIP and restart comparison/build using the new version. Submit the ZIP via the authenticated Plugin Creator `update_plugin` operation using exactly that plugin ID and `expected_release_id`. **Never create a replacement plugin.**
+7. Confirm the returned plugin ID, release ID and generated version, and inspect the installed file inventory for any missing or stale files. If source files have deliberately been removed, pass the current installed paths using `delete_paths` after reviewing impact: omitted files are otherwise preserved by the overlay update. Verify `@Prepare PR` remains available.
+8. Report the Git source SHA, ZIP checksum and resulting plugin release. Do not commit credentials or edit source after creating the ZIP without rebuilding.
+
+### Offline package preview
+
+```bash
+python3 scripts/build_plugin.py --output /tmp/prepare-pr-preview.zip
 ```
 
-4. Verify the resulting ZIP inventory, file contents, SHA-256 and provenance. The manifest's `name` must remain `prepare-pr`, and the visible display name must remain `Prepare PR`.
-5. Obtain the **current release ID** of the existing private plugin (ID `plugins_6ad9fe3ef0688191af1c9c4a7d5934ac`) from the authenticated Plugin Creator's plugin-files/metadata API. Never create a new plugin for an update.
-6. Compare the source release with the installed release. If their contents are equivalent, **do not publish a no-op**. If changed, submit the ZIP to Plugin Creator's **update_plugin** operation with the exact plugin ID and **expected_release_id**. It rejects stale concurrent updates.
-7. Check the response for status, release ID, correct plugin identity, expected files and warnings. Keep the existing plugin private; verify `@Prepare PR` is still discoverable. If a source file has been removed, update references and explicitly request its deletion using the current installed inventory. The update operation otherwise preserves omitted files.
-8. Record the source SHA and new plugin release ID in the operator's update summary. Do not commit release credentials or change the source files after packaging without rebuilding.
-
-**Important:** GitHub Actions in this repository **builds and validates** the plugin archive; it does **not** hold ChatGPT credentials or automatically publish it. This is a deliberate on-demand rollout.
+Without `--installed-version` the builder deliberately uses the checked-in version for testing only; **this is not a safe publish command after the installed plugin has advanced**.
 
 ## Example user request
 
 > Pull the latest reviewed Prepare PR skill from `affank1020/agent-workflows` main, validate and rebuild its package, and update my existing private `@Prepare PR` plugin in place. Don't make changes if already current.
 
-This procedure is suitable for any AI client with repository-reading, local packaging and authorized plugin-update tools. If one of those capabilities is unavailable, report the specific blocker rather than inventing publication success.
-
-## Longer-term
-
-More skills may be added under `skills/`, each with its own packaging configuration and plugin identity. Don't bundle them all into Prepare PR unless intentionally changing its scope.
+GitHub Actions builds and tests but **never publishes automatically**. This separation prevents unreviewed merges or CI credentials from changing installed behavior. Additional skills can later adopt the same model with separately declared plugin identities.
